@@ -85,28 +85,66 @@ export default function Home() {
     if (!cvRef.current) return;
     setIsGeneratingPDF(true);
     try {
+      const ua = navigator.userAgent;
+      const isIOS = /iPhone|iPad|iPod/i.test(ua);
+      const isMobile = isIOS || /Android/i.test(ua);
+
       const canvas = await html2canvas(cvRef.current, {
-        scale: 2,
+        scale: isMobile ? 1.5 : 2,
         useCORS: true,
+        allowTaint: true,
         backgroundColor: '#ffffff',
+        logging: false,
       });
-      const imgData = canvas.toDataURL('image/png');
+
+      const imgData = canvas.toDataURL('image/jpeg', 0.92);
       const pdf = new jsPDF('p', 'mm', 'a4');
       const pdfWidth = pdf.internal.pageSize.getWidth();
       const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
-      
-      pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
-      pdf.save(`${previewData.fullName || 'CV'}_CV.pdf`);
-      
-      toast({
-        title: "Başarılı",
-        description: "CV'niz başarıyla oluşturuldu ve indirildi.",
-      });
-    } catch (error) {
+
+      pdf.addImage(imgData, 'JPEG', 0, 0, pdfWidth, pdfHeight);
+
+      const fileName = `${previewData.fullName || 'CV'}_CV.pdf`;
+
+      if (isIOS) {
+        const dataUri = pdf.output('datauristring');
+        const opened = window.open(dataUri, '_blank');
+        if (!opened) {
+          const blob = pdf.output('blob');
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.target = '_blank';
+          a.rel = 'noopener noreferrer';
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          setTimeout(() => URL.revokeObjectURL(url), 10000);
+        }
+        toast({
+          title: "Başarılı",
+          description: "PDF yeni sekmede açıldı. Kaydetmek için 'Paylaş → Dosyalara Kaydet' seçeneğini kullanın.",
+        });
+      } else {
+        const blob = pdf.output('blob');
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = fileName;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        setTimeout(() => URL.revokeObjectURL(url), 10000);
+        toast({
+          title: "Başarılı",
+          description: "CV'niz başarıyla oluşturuldu ve indirildi.",
+        });
+      }
+    } catch {
       toast({
         variant: "destructive",
         title: "Hata",
-        description: "PDF oluşturulurken bir hata oluştu.",
+        description: "PDF oluşturulurken bir hata oluştu. Lütfen tekrar deneyin.",
       });
     } finally {
       setIsGeneratingPDF(false);
