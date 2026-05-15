@@ -299,3 +299,30 @@
     inset: -1px;
   }
 }
+
+@media print {
+  /* Hide everything, then reveal only the CV preview */
+  body * {
+    visibility: hidden !important;
+  }
+
+  #cvPreview,
+  #cvPreview * {
+    visibility: visible !important;
+  }
+
+  #cvPreview {
+    position: absolute !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: 100% !important;
+    max-height: none !important;
+    height: auto !important;
+    overflow: visible !important;
+    box-shadow: none !important;
+    border: none !important;
+    border-radius: 0 !important;
+    padding: 24px !important;
+    margin: 0 !important;
+  }
+}

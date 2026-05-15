@@ -84,62 +84,68 @@ export default function Home() {
   const handleDownloadPDF = async () => {
     if (!cvRef.current) return;
     setIsGeneratingPDF(true);
-    try {
-      const ua = navigator.userAgent;
-      const isIOS = /iPhone|iPad|iPod/i.test(ua);
-      const isMobile = isIOS || /Android/i.test(ua);
 
-      const canvas = await html2canvas(cvRef.current, {
-        scale: isMobile ? 1.5 : 2,
+    // Mobile: skip html2canvas entirely — use the browser's native print-to-PDF
+    if (window.innerWidth < 768) {
+      window.print();
+      setIsGeneratingPDF(false);
+      toast({
+        title: "Yazdırma menüsü açıldı",
+        description: "'PDF Olarak Kaydet' seçeneğini kullanarak CV'nizi kaydedebilirsiniz.",
+      });
+      return;
+    }
+
+    // Desktop: clone the node so html2canvas never touches React's live DOM
+    const original = cvRef.current;
+    const rect = original.getBoundingClientRect();
+    const clone = original.cloneNode(true) as HTMLElement;
+    clone.style.cssText = [
+      'position:fixed',
+      'top:-99999px',
+      'left:-99999px',
+      `width:${rect.width}px`,
+      `height:${original.scrollHeight}px`,
+      'overflow:visible',
+      'z-index:-1',
+      'pointer-events:none',
+      'visibility:hidden',
+    ].join(';');
+    document.body.appendChild(clone);
+
+    try {
+      const canvas = await html2canvas(clone, {
+        scale: 2,
         useCORS: true,
         allowTaint: true,
         backgroundColor: '#ffffff',
         logging: false,
+        width: rect.width,
+        height: original.scrollHeight,
       });
 
       const imgData = canvas.toDataURL('image/jpeg', 0.92);
       const pdf = new jsPDF('p', 'mm', 'a4');
       const pdfWidth = pdf.internal.pageSize.getWidth();
       const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
-
       pdf.addImage(imgData, 'JPEG', 0, 0, pdfWidth, pdfHeight);
 
       const fileName = `${previewData.fullName || 'CV'}_CV.pdf`;
+      const blob = pdf.output('blob');
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = fileName;
+      link.style.display = 'none';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      setTimeout(() => URL.revokeObjectURL(url), 15000);
 
-      if (isIOS) {
-        const dataUri = pdf.output('datauristring');
-        const opened = window.open(dataUri, '_blank');
-        if (!opened) {
-          const blob = pdf.output('blob');
-          const url = URL.createObjectURL(blob);
-          const a = document.createElement('a');
-          a.href = url;
-          a.target = '_blank';
-          a.rel = 'noopener noreferrer';
-          document.body.appendChild(a);
-          a.click();
-          document.body.removeChild(a);
-          setTimeout(() => URL.revokeObjectURL(url), 10000);
-        }
-        toast({
-          title: "Başarılı",
-          description: "PDF yeni sekmede açıldı. Kaydetmek için 'Paylaş → Dosyalara Kaydet' seçeneğini kullanın.",
-        });
-      } else {
-        const blob = pdf.output('blob');
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = fileName;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        setTimeout(() => URL.revokeObjectURL(url), 10000);
-        toast({
-          title: "Başarılı",
-          description: "CV'niz başarıyla oluşturuldu ve indirildi.",
-        });
-      }
+      toast({
+        title: "Başarılı",
+        description: "CV'niz başarıyla oluşturuldu ve indirildi.",
+      });
     } catch {
       toast({
         variant: "destructive",
@@ -147,6 +153,9 @@ export default function Home() {
         description: "PDF oluşturulurken bir hata oluştu. Lütfen tekrar deneyin.",
       });
     } finally {
+      if (document.body.contains(clone)) {
+        document.body.removeChild(clone);
+      }
       setIsGeneratingPDF(false);
     }
   };
