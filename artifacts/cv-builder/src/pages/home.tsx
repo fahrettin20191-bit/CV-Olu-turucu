@@ -7,8 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { useToast } from "@/hooks/use-toast";
 import { Plus, Trash2, Upload, Download, RefreshCw, Briefcase, GraduationCap, User, FileText, Image as ImageIcon } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import html2canvas from "html2canvas";
-import jsPDF from "jspdf";
+import { useReactToPrint } from "react-to-print";
 
 interface Experience {
   id: string;
@@ -71,7 +70,6 @@ export default function Home() {
   
   const [draftData, setDraftData] = useState<CVData>(initialCVData);
   const [previewData, setPreviewData] = useState<CVData>(initialCVData);
-  const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
 
   const handleUpdatePreview = () => {
     setPreviewData({ ...draftData });
@@ -81,84 +79,16 @@ export default function Home() {
     });
   };
 
-  const handleDownloadPDF = async () => {
-    if (!cvRef.current) return;
-    setIsGeneratingPDF(true);
-
-    // Mobile: skip html2canvas entirely — use the browser's native print-to-PDF
-    if (window.innerWidth < 768) {
-      window.print();
-      setIsGeneratingPDF(false);
-      toast({
-        title: "Yazdırma menüsü açıldı",
-        description: "'PDF Olarak Kaydet' seçeneğini kullanarak CV'nizi kaydedebilirsiniz.",
-      });
-      return;
-    }
-
-    // Desktop: clone the node so html2canvas never touches React's live DOM
-    const original = cvRef.current;
-    const rect = original.getBoundingClientRect();
-    const clone = original.cloneNode(true) as HTMLElement;
-    clone.style.cssText = [
-      'position:fixed',
-      'top:-99999px',
-      'left:-99999px',
-      `width:${rect.width}px`,
-      `height:${original.scrollHeight}px`,
-      'overflow:visible',
-      'z-index:-1',
-      'pointer-events:none',
-      'visibility:hidden',
-    ].join(';');
-    document.body.appendChild(clone);
-
-    try {
-      const canvas = await html2canvas(clone, {
-        scale: 2,
-        useCORS: true,
-        allowTaint: true,
-        backgroundColor: '#ffffff',
-        logging: false,
-        width: rect.width,
-        height: original.scrollHeight,
-      });
-
-      const imgData = canvas.toDataURL('image/jpeg', 0.92);
-      const pdf = new jsPDF('p', 'mm', 'a4');
-      const pdfWidth = pdf.internal.pageSize.getWidth();
-      const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
-      pdf.addImage(imgData, 'JPEG', 0, 0, pdfWidth, pdfHeight);
-
-      const fileName = `${previewData.fullName || 'CV'}_CV.pdf`;
-      const blob = pdf.output('blob');
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = fileName;
-      link.style.display = 'none';
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      setTimeout(() => URL.revokeObjectURL(url), 15000);
-
+  const handlePrint = useReactToPrint({
+    contentRef: cvRef,
+    documentTitle: `${previewData.fullName || 'CV'}_CV`,
+    onAfterPrint: () => {
       toast({
         title: "Başarılı",
-        description: "CV'niz başarıyla oluşturuldu ve indirildi.",
+        description: "Yazdırma penceresi açıldı. 'PDF Olarak Kaydet' seçeneğini kullanın.",
       });
-    } catch {
-      toast({
-        variant: "destructive",
-        title: "Hata",
-        description: "PDF oluşturulurken bir hata oluştu. Lütfen tekrar deneyin.",
-      });
-    } finally {
-      if (document.body.contains(clone)) {
-        document.body.removeChild(clone);
-      }
-      setIsGeneratingPDF(false);
-    }
-  };
+    },
+  });
 
   const handlePhotoUpload = (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -523,21 +453,11 @@ export default function Home() {
             <RefreshCw className="mr-2" size={16} /> Önizlemeyi Güncelle
           </Button>
           <Button 
-            onClick={handleDownloadPDF} 
-            disabled={isGeneratingPDF} 
+            onClick={() => handlePrint()}
             className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-semibold"
             data-testid="button-download-pdf"
           >
-            {isGeneratingPDF ? (
-              <div className="flex items-center justify-center">
-                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
-                Hazırlanıyor...
-              </div>
-            ) : (
-              <>
-                <Download className="mr-2" size={16} /> PDF OLUŞTUR & İNDİR
-              </>
-            )}
+            <Download className="mr-2" size={16} /> PDF OLUŞTUR & İNDİR
           </Button>
         </div>
       </div>
