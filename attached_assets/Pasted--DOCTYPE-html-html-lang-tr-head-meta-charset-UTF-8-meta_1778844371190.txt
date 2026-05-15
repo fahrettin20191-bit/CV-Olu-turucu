@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Profesyonel ATS CV Oluşturucu</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #333; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; padding: 20px; }
+        
+        .container { max-width: 1200px; margin: 0 auto; background: white; border-radius: 15px; box-shadow: 0 20px 40px rgba(0,0,0,0.1); overflow: hidden; }
+        
+        .header { background: linear-gradient(135deg, #2c3e50, #3498db); color: white; padding: 30px; text-align: center; }
+        .header h1 { font-size: 2.5em; margin-bottom: 10px; }
+        .header p { font-size: 1.2em; opacity: 0.9; }
+        
+        .main-content { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; padding: 40px; min-height: 80vh; }
+        
+        .form-section { background: #f8f9fa; padding: 30px; border-radius: 12px; border: 1px solid #e9ecef; }
+        .preview-section { position: relative; }
+        
+        .cv-preview { background: white; padding: 40px; border: 2px solid #e9ecef; border-radius: 8px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); max-height: 80vh; overflow-y: auto; font-size: 11px; line-height: 1.4; }
+        
+        .photo-container { width: 120px; height: 150px; border: 3px solid #3498db; border-radius: 8px; margin: 0 auto 20px; overflow: hidden; background: #f0f0f0; }
+        .photo-input { display: none; }
+        .photo-upload-btn { background: #3498db; color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; width: 100%; margin-bottom: 15px; }
+        
+        .form-group { margin-bottom: 20px; }
+        label { display: block; font-weight: 600; margin-bottom: 8px; color: #2c3e50; font-size: 14px; }
+        input, textarea, select { width: 100%; padding: 12px; border: 2px solid #e1e5e9; border-radius: 8px; font-size: 14px; transition: all 0.3s; }
+        input:focus, textarea:focus, select:focus { outline: none; border-color: #3498db; box-shadow: 0 0 0 3px rgba(52,152,219,0.1); }
+        
+        textarea { resize: vertical; min-height: 80px; }
+        
+        .experience-item, .education-item { background: white; padding: 20px; margin-bottom: 15px; border-radius: 8px; border-left: 4px solid #3498db; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
+        .remove-btn { background: #e74c3c; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; float: right; font-size: 12px; }
+        
+        .btn { padding: 15px 30px; border: none; border-radius: 8px; font-size: 16px; font-weight: 600; cursor: pointer; transition: all 0.3s; width: 100%; margin: 10px 0; }
+        .btn-primary { background: linear-gradient(135deg, #3498db, #2980b9); color: white; }
+        .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 10px 20px rgba(52,152,219,0.3); }
+        .btn-success { background: linear-gradient(135deg, #27ae60, #229954); color: white; }
+        .btn-success:hover { transform: translateY(-2px); box-shadow: 0 10px 20px rgba(39,174,96,0.3); }
+        
+        .add-btn { background: #3498db; color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-size: 12px; margin-left: 10px; }
+        
+        .cv-name { font-size: 28px; font-weight: 700; color: #2c3e50; margin-bottom: 5px; }
+        .cv-title { font-size: 18px; color: #7f8c8d; margin-bottom: 20px; font-weight: 500; }
+        .cv-section { margin-bottom: 25px; }
+        .cv-section h3 { font-size: 16px; color: #2c3e50; border-bottom: 2px solid #3498db; padding-bottom: 5px; margin-bottom: 12px; font-weight: 600; }
+        .cv-item { margin-bottom: 12px; }
+        .cv-date { color: #7f8c8d; font-size: 12px; }
+        .cv-company { font-weight: 600; color: #2c3e50; }
+        
+        @media (max-width: 768px) {
+            .main-content { grid-template-columns: 1fr; gap: 20px; padding: 20px; }
+            .header h1 { font-size: 1.8em; }
+            .cv-preview { padding: 20px; font-size: 10px; }
+            .photo-container { width: 100px; height: 130px; }
+        }
+        
+        @media (max-width: 480px) {
+            body { padding: 10px; }
+            .cv-preview { font-size: 9px; padding: 15px; }
+        }
+        
+        .loading { display: none; text-align: center; padding: 20px; color: #3498db; }
+        .loading::after { content: ''; display: inline-block; width: 20px; height: 20px; border: 2px solid #3498db; border-radius: 50%; border-top-color: transparent; animation: spin 1s linear infinite; margin-left: 10px; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📄 Profesyonel ATS CV Oluşturucu</h1>
+            <p>Algoritma dostu • Mobil uyumlu • Anında PDF indir</p>
+        </div>
+        
+        <div class="main-content">
+            <!-- FORM -->
+            <div class="form-section">
+                <h3 style="margin-bottom: 20px; color: #2c3e50;">📝 Bilgilerinizi Girin</h3>
+                
+                <!-- Fotoğraf -->
+                <div class="form-group">
+                    <label>Fotoğraf (Opsiyonel)</label>
+                    <div class="photo-container" id="photoPreview">
+                        <input type="file" id="photoInput" class="photo-input" accept="image/*">
+                        <button type="button" class="photo-upload-btn" onclick="document.getElementById('photoInput').click()">
+                            📷 Fotoğraf Yükle
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Kişisel Bilgiler -->
+                <div class="form-group">
+                    <label>Ad Soyad *</label>
+                    <input type="text" id="name" placeholder="Ör: Ahmet Yılmaz" required>
+                </div>
+                
+                <div class="form-group">
+                    <label>Unvan *</label>
+                    <input type="text" id="title" placeholder="Ör: Senior Yazılım Mühendisi" required>
+                </div>
+                
+                <div class="form-group">
+                    <label>Telefon</label>
+                    <input type="tel" id="phone" placeholder="Ör: +90 555 123 45 67">
+                </div>
+                
+                <div class="form-group">
+                    <label>E-posta *</label>
+                    <input type="email" id="email" placeholder="ornek@email.com" required>
+                </div>
+                
+                <div class="form-group">
+                    <label>LinkedIn / Web Sitesi</label>
+                    <input type="url" id="linkedin" placeholder="https://linkedin.com/in/ornek">
+                </div>
+                
+                <!-- İş Deneyimi -->
+                <div class="form-group">
+                    <label>İş Deneyimi</label>
+                    <button type="button" class="add-btn" onclick="addExperience()">➕ Ekle</button>
+                    <div id="experiences"></div>
+                </div>
+                
+                <!-- Eğitim -->
+                <div class="form-group">
+                    <label>Eğitim</label>
+                    <button type="button" class="add-btn" onclick="addEducation()">➕ Ekle</button>
+                    <div id="educations"></div>
+                </div>
+                
+                <!-- Yetenekler -->
+                <div class="form-group">
+                    <label>Yetenekler (Virgülle ayırın)</label>
+                    <textarea id="skills" placeholder="JavaScript, React, Node.js, Python, SQL, Git..."></textarea>
+                </div>
+                
+                <button class="btn btn-primary" onclick="updatePreview()">🔄 Önizlemeyi Güncelle</button>
+                <button class="btn btn-success" onclick="downloadPDF()" style="margin-top: 10px;">
+                    🚀 PDF OLUŞTUR & İNDİR
+                </button>
+                
+                <div class="loading" id="loading">PDF hazırlanıyor...</div>
+            </div>
+            
+            <!-- PREVIEW -->
+            <div class="preview-section">
+                <h3 style="margin-bottom: 15px; color: #2c3e50;">👀 Canlı Önizleme</h3>
+                <div class="cv-preview" id="cvPreview">
+                    <div style="text-align: center; margin-bottom: 30px;">
+                        <div class="photo-container" id="previewPhoto"></div>
+                        <div class="cv-name" id="previewName">Ad Soyad</div>
+                        <div class="cv-title" id="previewTitle">Unvan</div>
+                    </div>
+                    
+                    <div class="cv-section">
+                        <h3>İletişim</h3>
+                        <div id="previewContact"></div>
+                    </div>
+                    
+                    <div class="cv-section">
+                        <h3>İş Deneyimi</h3>
+                        <div id="previewExperience"></div>
+                    </div>
+                    
+                    <div class="cv-section">
+                        <h3>Eğitim</h3>
+                        <div id="previewEducation"></div>
+                    </div>
+                    
+                    <div class="cv-section">
+                        <h3>Yetenekler</h3>
+                        <div id="previewSkills"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let experienceCount = 0;
+        let educationCount = 0;
+        
+        // Fotoğraf yükleme
+        document.getElementById('photoInput').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    document.getElementById('photoPreview').innerHTML = 
+                        `<img src="${e.target.result}" style="width:100%; height:100%; object-fit: cover;">`;
+                    document.getElementById('previewPhoto').innerHTML = 
+                        `<img src="${e.target.result}" style="width:100%; height:100%; object-fit: cover;">`;
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+        
+        // İş deneyimi ekle
+        function addExperience() {
+            experienceCount++;
+            const div = document.createElement('div');
+            div.className = 'experience-item';
+            div.id = `exp-${experienceCount}`;
+            div.innerHTML = `
+                <button class="remove-btn" onclick="removeExperience(${experienceCount})">Kaldır</button>
+                <input type="text" placeholder="Şirket Adı" class="exp-company" data-type="company">
+                <input type="text" placeholder="Pozisyon" class="exp-position" data-type="position">
+                <input type="text" placeholder="Tarih (Ör: 2020 - Halen)" class="exp-date" data-type="date">
+                <textarea placeholder="Açıklama" class="exp-description" data-type="description"></textarea>
+            `;
+            document.getElementById('experiences').appendChild(div);
+        }
+        
+        // Eğitim ekle
+        function addEducation() {
+            educationCount++;
+            const div = document.createElement('div');
+            div.className = 'education-item';
+            div.id = `edu-${educationCount}`;
+            div.innerHTML = `
+                <button class="remove-btn" onclick="removeEducation(${educationCount})">Kaldır</button>
+                <input type="text" placeholder="Üniversite / Okul" class="edu-school" data-type="school">
+                <input type="text" placeholder="Bölüm / Derece" class="edu-degree" data-type="degree">
+                <input type="text" placeholder="Tarih (Ör: 2016 - 2020)" class="edu-date" data-type="date">
+            `;
+            document.getElementById('educations').appendChild(div);
+        }
+        
+        function removeExperience(id) {
+            document.getElementById(`exp-${id}`).remove();
+        }
+        
+        function removeEducation(id) {
+            document.getElementById(`edu-${id}`).remove();
+        }
+        
+        function updatePreview() {
+            // Kişisel bilgiler
+            document.getElementById('previewName').textContent = document.getElementById('name').value || 'Ad Soyad';
+            document.getElementById('previewTitle').textContent = document.getElementById('title').value || 'Unvan';
+            
+            // İletişim
+            let contact = '';
+            const phone = document.getElementById('phone').value;
+            const email = document.getElementById('email').value;
+            const linkedin = document.getElementById('linkedin').value;
+            
+            if (phone) contact += `Telefon: ${phone}<br>`;
+            if (email) contact += `E-posta: ${email}<br>`;
+            if (linkedin) contact += `LinkedIn: ${linkedin}<br>`;
+            
+            document.getElementById('previewContact').innerHTML = contact || 'İletişim bilgileri ekleyin';
+            
+            // Yetenekler
+            const skills = document.getElementById('skills').value;
+            document.getElementById('previewSkills').innerHTML = skills ? 
+                skills.split(',').map(s => s.trim()).join(' • ') : 'Yeteneklerinizi ekleyin';
+            
+            // İş deneyimi
+            let expHtml = '';
+            document.querySelectorAll('.experience-item').forEach(item => {
+                const company = item.querySelector('[data-type="company"]').value;
+                const position = item.querySelector('[data-type="position"]').value;
+                const date = item.querySelector('[data-type="date"]').value;
+                const desc = item.querySelector('[data-type="description"]').value;
+                
+                if (company || position) {
+                    expHtml += `
+                        <div class="cv-item">
+                            <div class="cv-company">${company || 'Şirket'}</div>
+                            <div>${position || 'Pozisyon'} ${date ? `| ${date}` : ''}</div>
+                            ${desc ? `<div>${desc}</div>` : ''}
+                        </div>
+                    `;
+                }
+            });
+            document.getElementById('previewExperience').innerHTML = expHtml || 'İş deneyiminizi ekleyin';
+            
+            // Eğitim
+            let eduHtml = '';
+            document.querySelectorAll('.education-item').forEach(item => {
+                const school = item.querySelector('[data-type="school"]').value;
+                const degree = item.querySelector('[data-type="degree"]').value;
+                const date = item.querySelector('[data-type="date"]').value;
+                
+                if (school || degree) {
+                    eduHtml += `
+                        <div class="cv-item">
+                            <div class="cv-company">${school || 'Okul'}</div>
+                            <div>${degree || 'Derece'} ${date ? `| ${date}` : ''}</div>
+                        </div>
+                    `;
+                }
+            });
+            document.getElementById('previewEducation').innerHTML = eduHtml || 'Eğitim bilgilerinizi ekleyin';
+        }
+        
+        async function downloadPDF() {
+            const loading = document.getElementById('loading');
+            const preview = document.getElementById('cvPreview');
+            
+            loading.style.display = 'block';
+            
+            try {
+                const canvas = await html2canvas(preview, {
+                    scale: 2,
+                    useCORS: true,
+                    backgroundColor: '#ffffff',
+                    width: preview.scrollWidth,
+                    height: preview.scrollHeight
+                });
+                
+                const imgData = canvas.toDataURL('image/png');
+                const { jsPDF } = window.jspdf;
+                const pdf = new jsPDF('p', 'mm', 'a4');
+                
+                const imgWidth = 210;
+                const pageHeight = 295;
+                const imgHeight = (canvas.height * imgWidth) / canvas.width;
+                let heightLeft = imgHeight;
+                let position = 0;
+                
+                pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+                heightLeft -= pageHeight;
+                
+                while (heightLeft >= 0) {
+                    position = heightLeft - imgHeight;
+                    pdf.addPage();
+                    pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+                    heightLeft -= pageHeight;
+                }
+                
+                const name = document.getElementById('name').value.replace(/\s+/g, '_') || 'CV';
+                pdf.save(`${name}_CV.pdf`);
+                
+            } catch (error) {
+                alert('PDF oluşturma hatası! Tarayıcınızı yenileyip tekrar deneyin.');
+            } finally {
+                loading.style.display = 'none';
+            }
+        }
+        
+        // İlk örnek verileri ekle
+        window.onload = function() {
+            addExperience();
+            addEducation();
+            updatePreview();
+        };
+    </script>
+</body>
+</html>
